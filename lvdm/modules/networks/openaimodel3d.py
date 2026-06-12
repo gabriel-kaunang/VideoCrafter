@@ -14,7 +14,8 @@ from lvdm.basics import (
     normalization
 )
 from lvdm.modules.attention import SpatialTransformer, TemporalTransformer
-
+import os
+import numpy as np
 
 class TimestepBlock(nn.Module):
     """
@@ -74,6 +75,30 @@ class Downsample(nn.Module):
 
     def forward(self, x):
         assert x.shape[1] == self.channels
+        if self.use_conv:
+            SAVE_DIR = "/home/gabs/VideoCrafter/tmp/values/conv_downsample"
+            os.makedirs(SAVE_DIR, exist_ok=True)
+            input_path = f"{SAVE_DIR}/input.npy"
+            weight_path = f"{SAVE_DIR}/weight.npy"
+            bias_path = f"{SAVE_DIR}/bias.npy"
+            output_path = f"{SAVE_DIR}/output.npy"
+            output = self.op(x)
+            """
+            print("Downsample shape:")
+            print("BEFORE:")
+            print(x.shape)
+            print("AFTER:")
+            print(output.shape)
+            """
+            if not os.path.exists(output_path):
+                print("SAVED")
+                np.save(input_path, x.detach().float().cpu().numpy())
+                np.save(weight_path, self.op.weight.detach().float().cpu().numpy())
+                if self.op.bias is not None:
+                    np.save(bias_path, self.op.bias.detach().float().cpu().numpy())
+                else:
+                    np.save(bias_path, np.array([]))
+                np.save(output_path, output.detach().float().cpu().numpy())
         return self.op(x)
 
 
@@ -102,7 +127,17 @@ class Upsample(nn.Module):
         else:
             x = F.interpolate(x, scale_factor=2, mode='nearest')
         if self.use_conv:
+            """
+            print("Upsample shape:")
+            print(type(self.conv))
+            print("BEFORE:")
+            print(x.shape)
+            """
             x = self.conv(x)
+            """
+            print("AFTER:")
+            print(x.shape)
+            """
         return x
 
 
